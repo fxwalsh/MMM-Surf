@@ -48,7 +48,7 @@ Module.register("MMM-Surf", {
 	//----------------------------------------
 	//Other variables
         units: config.units,
-        windunits: "bft", // choose from mph, bft
+        windunits: "mph", // choose from mph, bft
         updateInterval: 30*60*1000, // conversion to milliseconds (Minutes * 60 Seconds * 1000). Only change minutes. Be kind, don't hammer APIs.
         animationSpeed: 1000,
         timeFormat: config.timeFormat,
@@ -163,17 +163,22 @@ Module.register("MMM-Surf", {
         this.loaded = false;
         this.error = false;
         this.errorDescription = "";
-	this.getNOAA();
-	this.getDarkSky();
-	this.getMagicseaweed();
+	//this.getNOAA();
+	//this.getDarkSky();
+    this.getMagicseaweed();
+    
+    //this.getM5Buoy();
+
+    this.getTideData();
+
 	this.lastUpdatedTime = ""; 
         this.haveforecast = 0;
     },
 
-    getNOAA: function() {
-        if (this.config.debug === 1) { Log.info(moment().format('YYYY-MM-DDTHH:mm:ss.SSSZZ') + " SOCKET(SEND TO HELPER): GET_NOAA (1):"); }
-        this.sendSocketNotification("GET_NOAA", this.config);
-    }, //end getNOAA function
+    //getNOAA: function() {
+    //    if (this.config.debug === 1) { Log.info(moment().format('YYYY-MM-DDTHH:mm:ss.SSSZZ') + " SOCKET(SEND TO HELPER): GET_NOAA (1):"); }
+    //    this.sendSocketNotification("GET_NOAA", this.config);
+    //}, //end getNOAA function
 
     getDarkSky: function() {
         if (this.config.debug === 1) { Log.info(moment().format('YYYY-MM-DDTHH:mm:ss.SSSZZ') + " SOCKET(SEND TO HELPER): GET_DARKSKY (1):"); }
@@ -184,6 +189,17 @@ Module.register("MMM-Surf", {
         if (this.config.debug === 1) { Log.info(moment().format('YYYY-MM-DDTHH:mm:ss.SSSZZ') + " SOCKET(SEND TO HELPER): GET_MAGIC (1):"); }
         this.sendSocketNotification("GET_MAGIC", this.config);
     }, //end getMagicseaweed function
+
+    getM5Buoy: function() {
+        if (this.config.debug === 1) { Log.info(moment().format('YYYY-MM-DDTHH:mm:ss.SSSZZ') + " SOCKET(SEND TO HELPER): GET_M5 (1):"); }
+        this.sendSocketNotification("GET_M5", this.config);
+    }, //end getM5 function
+
+    getTideData: function() {
+        if (this.config.debug === 1) { Log.info(moment().format('YYYY-MM-DDTHH:mm:ss.SSSZZ') + " SOCKET(SEND TO HELPER): GET_M5 (1):"); }
+        this.sendSocketNotification("GET_Tide", this.config);
+    }, //end getTide function
+
 
 
     // Override dom generator.
@@ -201,12 +217,6 @@ Module.register("MMM-Surf", {
         var currentStep;
         var steps;
 
-        if (this.config.DarkSkyAPI === "") {
-            wrapper.innerHTML = this.translate("APIKEY") + this.name + ".";
-            wrapper.className = "dimmed light small";
-            return wrapper;
-        }
-
         if (this.error) {
             wrapper.innerHTML = "Error: " + this.errorDescription;
             wrapper.className = "dimmed light small";
@@ -218,158 +228,6 @@ Module.register("MMM-Surf", {
             wrapper.className = "dimmed light small";
             return wrapper;
         }
-
-		//Build CURRENT WEATHER row
-		var small = document.createElement("div");
-		small.className = "normal medium";
-
-		var spacer = document.createElement("span");
-		spacer.innerHTML = "&nbsp;";
-
-		var table_sitrep = document.createElement("table");
-
-		var row_sitrep = document.createElement("tr");
-		var spot_row = document.createElement("tr");
-
-		if (this.config.MagicSeaweedSpotName != "") {
-			var row = document.createElement("tr");
-			var spotTextCell = document.createElement("td");
-			//display spot name from config
-			spotTextCell.className = "spotName";
-			spotTextCell.setAttribute("colSpan", "10");
-			spotTextCell.innerHTML = this.config.MagicSeaweedSpotName;
-
-			spot_row.appendChild(spotTextCell);
-			table_sitrep.appendChild(spot_row);
-		}
-
-		var weatherIcon = document.createElement("td");
-		weatherIcon.className = "wi " + this.weatherType;
-		row_sitrep.appendChild(weatherIcon);
-
-		var temperature = document.createElement("td");
-		temperature.className = "bright";
-		temperature.innerHTML = " " + this.temperature + "&deg;";
-		row_sitrep.appendChild(temperature);
-
-		var windIcon = document.createElement("td");
-		if (this.config.windunits == "mph") {
-			windIcon.innerHTML = this.windSpeedMph + "<sub>mph</sub>";
-		} else {
-			windIcon.className = "wi " + this.windSpeed;
-		}
-		row_sitrep.appendChild(windIcon);
-		row_sitrep.className = "pop";
-
-		var windDirectionIcon = document.createElement("td");
-		windDirectionIcon.className = "wi wi-wind " + this.windDirection;
-		windDirectionIcon.innerHTML = "&nbsp;";
-
-		row_sitrep.appendChild(windDirectionIcon);
-
-		var HumidityIcon = document.createElement("td");
-		HumidityIcon.className = "wi wi-humidity lpad";
-		row_sitrep.appendChild(HumidityIcon);
-
-		var HumidityTxt = document.createElement("td");
-		HumidityTxt.innerHTML = this.Humidity + "&nbsp;";
-		HumidityTxt.className = "vcen left";
-		row_sitrep.appendChild(HumidityTxt);
-
-		var sunriseSunsetIcon = document.createElement("td");
-		sunriseSunsetIcon.className = "wi " + this.sunriseSunsetIcon;
-		row_sitrep.appendChild(sunriseSunsetIcon);
-
-		var sunriseSunsetTxt = document.createElement("td");
-		sunriseSunsetTxt.innerHTML = this.sunriseSunsetTime;
-		sunriseSunsetTxt.className = "vcen left";
-		row_sitrep.appendChild(sunriseSunsetTxt);
-
-		var moonPhaseIcon = document.createElement("td");
-		//moonPhaseIcon.innerHTML = this.moonPhaseIcon;
-		moonPhaseIcon.className = "wi " + this.moonPhaseIcon;
-		row_sitrep.appendChild(moonPhaseIcon);
-
-		//close current weather conditions row (top)
-		table_sitrep.appendChild(row_sitrep);
-		small.appendChild(table_sitrep);
-
-		// CURRENT WATER CONDITIONS
-		var small2 = document.createElement("div");
-		small2.className = "normal medium test";
-
-		var spacer = document.createElement("span");
-		spacer.innerHTML = "&nbsp;";
-
-		//add divider
-		var divider = document.createElement("hr");
-		divider.className = "hrDivider";
-		small2.appendChild(divider);
-
-		// Current Water Conditions (second row)
-		var table_watersitrep = document.createElement("table");
-		var row_watersitrep = document.createElement("tr");
-		row_watersitrep.className = "pop";
-
-		/* Display Water Temperature & Gear Choices
-		 * wetsuit/gear choice evals water temp and makes a recommendation
-		 * Not a science...weather conditions will influence your choice
-		 */
-                gear = "";
-                WaterEval = Math.round(this.WaterTemp);
-                if (WaterEval >= 73) {gear = "Boardies!";}
-                if (WaterEval >= 65 && WaterEval <= 72) { gear = "2mm";}
-                if (WaterEval >= 59 && WaterEval <= 64) { gear = "3/2";}
-                if (WaterEval >= 54 && WaterEval <= 58) { gear = "4/3";}
-                if (WaterEval >= 47 && WaterEval <= 53) { gear = "5/4/3";}
-                if (WaterEval <= 46) {gear = "6/5/4";}
-		
-
-		var WaterTxt = document.createElement("td");
-		WaterTxt.innerHTML = Math.round(this.WaterTemp) + "&deg; <br>" + "<span class=\"smaller\"> Gear: <br>" + gear + "</span>"; //round to nearest whole because 50.2 degrees doesn't make a  difference
-		WaterTxt.className = "water";
-
-
-		row_watersitrep.appendChild(WaterTxt);
-
-		//Display Tide Data
-		var TideIcon = document.createElement("td");
-	    	if (this.DeltaPerc >= 0 && this.DeltaPerc <= 33) {
-			TideIcon.innerHTML = "<img src='./modules/MMM-Surf/img/" + this.TideTypeCurrent + "Tide1.png" + "'>";}
-	        if (this.DeltaPerc >= 34 && this.DeltaPerc <= 66) {
-			TideIcon.innerHTML = "<img src='./modules/MMM-Surf/img/" + this.TideTypeCurrent + "Tide2.png" + "'>";}
-		if (this.DeltaPerc >= 67) {
-			TideIcon.innerHTML = "<img src='./modules/MMM-Surf/img/" + this.TideTypeCurrent + "Tide3.png" + "'>";}
-	    	TideIcon.className = "wi";
-		row_watersitrep.appendChild(TideIcon);
-
-		var TideTxt = document.createElement("td");
-		if (this.TideTypeCurrent == "Low") {
-			TideTxt.innerHTML = this.TideHeightCurrent + "' @ " + moment(this.TideTimeCurrent).format('LT') + " <br> " + this.DeltaPerc + "% out";
-		} else {
-			TideTxt.innerHTML = this.TideHeightCurrent + "'@ " + moment(this.TideTimeCurrent).format('LT') + " <br> " + this.DeltaPerc + "% in";
-		}
-		TideTxt.className = "small vcen left";
-		row_watersitrep.appendChild(TideTxt);
-
-		//Display Next Tide Data and Time
-		var nextTideIcon = document.createElement("td");
-		nextTideIcon.innerHTML = "<img src='./modules/MMM-Surf/img/" + this.TideTypeNext + ".png" + "'>";
-		nextTideIcon.className = "wi";
-		row_watersitrep.appendChild(nextTideIcon);
-
-		var nextTideTxt = document.createElement("td");
-		nextTideTxt.innerHTML = this.TideHeightNext + "' @ " + moment(this.TideTimeNext).format('LT');
-		nextTideTxt.className = "small vcen left";
-		row_watersitrep.appendChild(nextTideTxt);
-
-		//Close Water Conditions Row in table (second row)
-		table_watersitrep.appendChild(row_watersitrep);
-		small2.appendChild(table_watersitrep);
-
-		//Write Current Weather and Current Water
-		wrapper.appendChild(small);
-		wrapper.appendChild(small2);
 
 
         // ------------------ 12 HOUR SURF FORECAST ------------------
@@ -772,232 +630,10 @@ Module.register("MMM-Surf", {
     }, //end getDom function
 
 
-    /* processWeather(data)
-     * 
-     * Processes DarkSky data for current conditions data only. 
-     * this feeds the first row of icons
-     */
+ 
 
-    processWeather: function(data) {
-        if (this.config.debug === 1) { Log.info(data); } //print Object to browser console
-        if (this.config.debug === 1) { Log.info(moment().format('YYYY-MM-DDTHH:mm:ss.SSSZZ') + " Processing Data: DarkSky (6)") };
-        //if (data.currently.estimated.hasOwnProperty("estimated") && this.haveforecast == 1) {
-        //    if (this.config.debug === 1) { console.log("WeatherUnderground served us an estimated forecast. Skipping update..."); }
-        //    return;
-        //}
+   
 
-        this.haveforecast = 1;
-
-        if (data.flags.hasOwnProperty("darksky-unavailable")) {
-            this.errorDescription = data.response.error.description;
-            this.error = true;
-            this.updateDom(this.config.animationSpeed);
-        } else {
-            this.error = false;
-            var forecast;
-            var i;
-            var count;
-            var iconTable = this.config.iconTableDay;
-            var sunrise = new Date();
-	    this.sunrise=data.daily.data[0].sunriseTime;
-
-//            this.sunrhour = Number(data.daily.data[0].sunriseTime);
-//            sunrise.setHours(data.daily.data[0].sunriseTime.sunrise.hour);
-//            sunrise.setMinutes(data.daily.data[0].sunriseTime.sunrise.minute);
-
-            var sunset = new Date();
-	    this.sunset = data.daily.data[0].sunsetTime;
-//            this.sunshour = Number(data.daily.data[0].sunsetTime.sunset.hour);
-//            sunset.setHours(daily.data[0].sunsetTime.sunset.hour);
-//            sunset.setMinutes(data.daily.data[0].sunsetTime.sunset.minute);
-
-            // The moment().format("h") method has a bug on the Raspberry Pi.
-            // So we need to generate the timestring manually.
-            // See issue: https://github.com/MichMich/MagicMirror/issues/181
-	    var now = new Date(); // pull in T/D for processing
-            var sunriseSunsetDateObject = (sunrise < now && sunset > now) ? sunset : sunrise;
-            var timeString = moment(sunriseSunsetDateObject).format("HH:mm");
-
-            if (this.config.timeFormat !== 24) {
-                if (this.config.showPeriod) {
-                    if (this.config.showPeriodUpper) {
-                        timeString = moment(sunriseSunsetDateObject).format("h:mm A");
-                    } else {
-                        timeString = moment(sunriseSunsetDateObject).format("h:mm a");
-                    }
-                } else {
-                    timeString = moment(sunriseSunsetDateObject).format(
-                        "h:mm");
-                }
-            } // end timeFormat if
-
-            this.sunriseSunsetTime = timeString;
-            this.sunriseSunsetIcon = (sunrise < now && sunset > now) ? "wi-sunset" : "wi-sunrise";
-            this.iconTable = (sunrise < now && sunset > now) ? this.config
-                .iconTableDay : this.config.iconTableNight;
-
-
-            this.weatherType = this.iconTable[data.currently.icon];
-            this.windDirection = this.deg2Cardinal(data.currently.windBearing);
-            this.windDirectionTxt = data.currently.windBearing;
-            this.Humidity = data.currently.humidity*100; 
-            this.windSpeed = "wi-wind-beaufort-" + this.ms2Beaufort(data.currently.windSpeed);
-            this.windSpeedMph = data.currently.windSpeed;
-	    this.moonPhaseIcon = this.moon_icon(data.daily.data[0].moonPhase);
-
-            if (this.config.units == "metric") {
-                this.temperature = data.currently.temp_c;
-                var fc_text = data.forecast.txt_forecast.forecastday[0].fcttext_metric.replace(/(.*\d+)(C)(.*)/gi, "$1°C$3");
-            } else {
-                this.temperature = data.currently.temperature;
-                var fc_text = data.currently.summary;
-            }
-
-            this.temperature = this.roundValue(this.temperature);
-
-            this.loaded = true;
-            this.updateDom(this.config.animationSpeed);
-            if (this.config.debug === 1) { Log.info(moment().format('YYYY-MM-DDTHH:mm:ss.SSSZZ') + ' Rendering DarkSky data to UI (7)'); }
-            if (this.config.debug === 1) { Log.info('-------------------------------------------------------------------'); }
-        } //end if/else clause
-    }, //end processWeather
-
-    /* processNOAA_TIDE_DATA(data)
-     *
-     * Processes NOAA Tide Data to find previous, current, immediate next, and future tides
-     * 
-     */
-    processNOAA_TIDE_DATA: function(data) {
-        //JSON Structure - { "predictions" : [{"t":"2017-11-24 04:28", "v":"0.845", "type":"L"}
-        if (this.config.debug === 1) { Log.info(moment().format('YYYY-MM-DDTHH:mm:ss.SSSZZ') + " Processing Data: NOAA_TIDE (6)") };
-        if (this.config.debug === 1) { Log.info(data); } //print Object to browser console
-
-        var previousTideCount = 0;
-        var NextTide = ""; //flag for IDing the next tide after Current
-        var CurrentTide = ""; //flag for IDing the current tide given current time compared to previous and next tide
-        for (i = 0, count = data.predictions.length; i < count; i++) {
-            var len = data.predictions.length;
-            var current = data.predictions[i];
-            var previous = data.predictions[(i + len - 1) % len];
-            var next = data.predictions[(i + 1) % len];
-            //Modulus to itterate through Object to get next tide
-
-            var TideTableTime = new Date(current.t); //get current tide date element [i]
-            var NextTideTime = new Date(next.t); //get next tide date element [i+1] 
-            var PrevTideTime = new Date(previous.t); //get previous tide date element [i-1]
-            if (current.type == "H") { data.predictions[i].type = "High"; } //change Object element from H to High
-            if (current.type == "L") { data.predictions[i].type = "Low"; } //change Object element from L to Low
-	    var now = new Date(); //define current time/date for processing
-
-            if ((CurrentTide == "" || CurrentTide == "false") && (TideTableTime >= now && TideTableTime <= NextTideTime)) {
-                //Evaluate if the Tide is current, if so skip. If no, evaluate time of tide
-                //if the tide time provided by NOAA is between now (current date/time) and the next tide...we're in the current tide!
-                NextTide = 'false'; //set flag
-                CurrentTide = 'true'; //set flag
-                data.predictions[i].TideStatus = 'CURRENT'; //add indicator to NOAA Tide Object
-
-                var TideDelta = Math.abs(TideTableTime - PrevTideTime) / 36e5;
-                //returns in miliseconds 36e5 is the scientific notation for 60*60*1000, dividing by which converts the milliseconds difference into hours 
-                //delta between Current Tide and Previous Tide, returns hours
-                var TideDeltaNow = Math.abs(now - PrevTideTime) / 36e5;
-                //delta between current Time and Previous Tide in Object[i-1]
-                this.DeltaPerc = Math.round(Math.abs(TideDeltaNow / TideDelta) * 100);
-                //divide two deltas to get percentage of action for current tide
-
-                continue;
-            }
-
-            if (TideTableTime < now) {
-                //if NOAA provided time is less than current date/time, it's in the past
-
-                NextTide = "false";
-                CurrentTide = "false";
-                data.predictions[i].TideStatus = "PREVIOUS"; //add indicator to NOAA Tide Object
-                continue;
-            }
-            if (CurrentTide == "true" && NextTide == "false" && NextTideTime > TideTableTime) {
-                //if the NextTideTime is greater than the current TideTableTime[i] under eval, it's the next one
-                NextTide = "true";
-                data.predictions[i].TideStatus = "NEXT"; //add indicator to NOAA Tide Object
-                continue;
-            }
-            if (CurrentTide == "true" && NextTide == "true") {
-                //if all flags are true, then we're in the future
-                data.predictions[i].TideStatus = "FUTURE"; //add indicator to NOAA Tide Object
-                continue;
-            }
-        } //end for loop
-        const currentKey = Object.keys(data.predictions).find(key => data.predictions[key].TideStatus === 'CURRENT');
-        //find the Object ID based on the TideStatus key
-        var CurTide = 0;
-        var PTide = 0;
-        var NTide = 0;
-        CurTide = currentKey;
-        PTide = CurTide; //solving for javascript math weirdness
-        PTide--; //subtrack one from CurTide to get Previous Tide
-        NTide = CurTide;
-        NTide++; //Add one to CurTide to get next tide
-
-        var TideTypePrevious = data.predictions[PTide].type;
-        var TideHeightPrevious = data.predictions[PTide].v;
-        var TideTimePrevious = new Date(data.predictions[PTide].t);
-        if (this.config.debug === 1) {
-            Log.info("---PREVIOUS TIDE--- " + TideTypePrevious + " tide was at: " + TideTimePrevious + " with a height of " + TideHeightPrevious + " ft.");
-        }
-        this.TideTimeCurrent = new Date(data.predictions[CurTide].t); //Object variable t for time
-        this.TideHeightCurrent = this.roundValue(data.predictions[CurTide].v); // Current tide height
-        this.TideTypeCurrent = data.predictions[CurTide].type; // High or Low
-        if (this.config.debug === 1) {
-            Log.info("***CURRENT TIDE*** " + this.DeltaPerc + "% into " + this.TideTypeCurrent + " tide. Full tide @ " + this.TideTimeCurrent.getHours() + ":" + this.TideTimeCurrent.getMinutes() + "with a height of " + this.TideHeightCurrent + "ft.");
-        }
-        this.TideTimeNext = new Date(data.predictions[NTide].t);
-        this.TideHeightNext = this.roundValue(data.predictions[NTide].v);
-        this.TideTypeNext = data.predictions[NTide].type;
-        if (this.config.debug === 1) {
-            Log.info("+++NEXT TIDE+++ " + this.TideTypeNext + " tide is at: " + this.TideTimeNext + " with a height of " + this.TideHeightNext + " ft.");
-        }
-        this.loaded = true;
-        this.updateDom(this.config.animationSpeed);
-        if (this.config.debug === 1) { Log.info(moment().format('YYYY-MM-DDTHH:mm:ss.SSSZZ') + ' Rendering NOAA Tide data to UI (7)'); }
-        if (this.config.debug === 1) { Log.info('-------------------------------------------------------------------'); }
-    }, // end processNOAA_TIDE_DATA function
-
-    /* processNOAA_WATERTEMP(data)
-     *
-     * Processes NOAA Water Temperature data to find 
-     * current water temperature
-     * 
-     */
-
-    processNOAA_WATERTEMP: function(data) {
-        //Example JSON structure:
-        //"metadata":{"id":"8534720","name":"Atlantic City","lat":"39.3550","lon":"-74.4183"}, 
-        //"data": [{"t":"2017-11-24 00:00", "v":"50.7", "f":"0,0,0"}
-        if (this.config.debug === 1) { Log.info(moment().format('YYYY-MM-DDTHH:mm:ss.SSSZZ') + " Processing Data: NOAA Water Temp (6)") };
-        if (this.config.debug === 1) { Log.info(data); } //print Object to browser console
-        var stationID = data.metadata.id; //only used in debug mode currently
-        var stationName = data.metadata.name; //only used in debug mode currently
-        //var coords_lat = data.metadata.lat; //not used
-        //var coords_lon = data.metadata.lon; //not used
-
-        //Effeciency assumption: most current reading will always be last element
-        //NOAA provides 13 measurements. Object counts start at 0...need to subtract 1 to get to item 12, the most recent measurement
-	var now = new Date();
-        var CurrentHour = now.getHours();
-        var WaterTempLength = data.data.length - 1;
-        var WaterTempTime = new Date(data.data[WaterTempLength].t);
-        var WaterTempHour = WaterTempTime.getHours();
-
-	this.WaterTemp = data.data[WaterTempLength].v; // pull current water temp from data.
-        if (this.config.debug === 1) {
-            Log.info("***CURRENT WATER*** temperature at " + stationName + " is: " + this.WaterTemp + " at " + WaterTempTime + ".");
-        }
-
-        this.loaded = true;
-        this.updateDom(this.config.animationSpeed);
-        if (this.config.debug === 1) { Log.info(moment().format('YYYY-MM-DDTHH:mm:ss.SSSZZ') + ' Rendering NOAA Water Temp data to UI (7)'); }
-        if (this.config.debug === 1) { Log.info('-------------------------------------------------------------------'); }
-    }, // end processNOAA_WATERTEMP function
 
 
     /* processMAGICSEAWEED (data)
@@ -1059,7 +695,7 @@ Module.register("MMM-Surf", {
 		if (data[i].wind.gusts >= 20) {forecastScore--;}
 		// -1 for generally unsurfable times 1am, 7pm, and 10pm
 		if (moment.unix(data[i].localTimestamp).format('HH') == 01 || 
-			moment.unix(data[i].localTimestamp).format('HH') == 19 ||
+			//moment.unix(data[i].localTimestamp).format('HH') == 19 ||
 			moment.unix(data[i].localTimestamp).format('HH') == 22) {forecastScore--;}
 		data[i].forecastScore = forecastScore;
 		data[i].forecastDay = moment.unix(data[i].localTimestamp).format('ddd');	
@@ -1166,7 +802,7 @@ Module.register("MMM-Surf", {
         for (i = 0, count = data.length; i < count; i++) {
             if (data[i].localTimestamp != "IGNORE") {
                 this.magicday = moment.unix(data[i].localTimestamp).format('ddd');
-                this.magichour = moment.unix(data[i].localTimestamp).format('hh:mm A');
+                this.magichour = moment.unix(data[i].localTimestamp).subtract(1, 'hours').format('hh:mm A');
                 this.solidRating = data[i].solidRating;
                 this.fadedRating = data[i].fadedRating;
                 //build star rating object based on https://magicseaweed.com/developer/forecast-api
@@ -1491,6 +1127,20 @@ Module.register("MMM-Surf", {
             if (notification === 'MAGICSEAWEED') {
                 if (this.config.debug === 1) { Log.info(moment().format('YYYY-MM-DDTHH:mm:ss.SSSZZ') + ' SOCKET(RECEIVED FROM HELPER) (5): ' + notification + ' Payload data'); }
                 self.processMAGICSEAWEED(JSON.parse(payload));
+		    	if (this.config.debug === 1) { Log.info(moment().format('YYYY-MM-DDTHH:mm:ss.SSSZZ') + " SOCKET(SEND TO HELPER): UPDATE_TIMER"); }
+		    	this.sendSocketNotification("UPDATE_TIMER", this.config);
+		    
+            }
+            if (notification === 'M5') {
+                if (this.config.debug === 1) { Log.info(moment().format('YYYY-MM-DDTHH:mm:ss.SSSZZ') + ' SOCKET(RECEIVED FROM HELPER) (5): ' + notification + ' Payload data'); }
+                self.processM5(JSON.parse(payload));
+		    	if (this.config.debug === 1) { Log.info(moment().format('YYYY-MM-DDTHH:mm:ss.SSSZZ') + " SOCKET(SEND TO HELPER): UPDATE_TIMER"); }
+		    	this.sendSocketNotification("UPDATE_TIMER", this.config);
+		    
+            }
+            if (notification === 'TIDES') {
+                if (this.config.debug === 1) { Log.info(moment().format('YYYY-MM-DDTHH:mm:ss.SSSZZ') + ' SOCKET(RECEIVED FROM HELPER) (5): ' + notification + ' Payload data'); }
+                self.processTides(JSON.parse(payload));
 		    	if (this.config.debug === 1) { Log.info(moment().format('YYYY-MM-DDTHH:mm:ss.SSSZZ') + " SOCKET(SEND TO HELPER): UPDATE_TIMER"); }
 		    	this.sendSocketNotification("UPDATE_TIMER", this.config);
 		    

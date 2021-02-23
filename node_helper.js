@@ -26,6 +26,15 @@ module.exports = NodeHelper.create({
         //Magicseaweed Surf Forecast
         this.MAGICfetcherRunning = false;
         this.magicseaweed = "";
+
+        this.M5fetcherRunning = false;
+        this.m5="";
+        this.M5TidePayload = "";
+    this.M5TempPayload = "";
+
+    this.TidefetcherRunning = false;
+    this.tides="";
+    
 	this.started = false;
     },
 
@@ -220,6 +229,103 @@ module.exports = NodeHelper.create({
         this.MAGICfetcherRunning = false;
     }, //end Magicseaweed function
 
+    // START M5 FUNCTION
+    fetchM5Data: function() {
+        var self = this;
+        var apiMessage = "";
+        this.M5fetcherRunning = true;
+        //Magicseaweed URL
+
+        var m5URL = encodeURI(this.config.M5Url);
+        if (this.config.debug === 1) {
+            apiMessage = moment().format('YYYY-MM-DDTHH:mm:ss.SSSZZ') + " HELPER: M5 API REQUEST: " + m5URL;
+            self.sendSocketNotification('HELPER_MESSAGE', apiMessage);
+        }
+        request({
+                url: m5URL,
+                method: 'GET'
+            },
+            function(error, response, body) {
+                if (!error && response.statusCode == 200) {
+                   
+			m5 = body;
+                    if (self.config.debug === 1) {
+                        apiMessage = moment().format('YYYY-MM-DDTHH:mm:ss.SSSZZ') + ' HELPER: M5 API RESULT: Received';
+                        self.sendSocketNotification('HELPER_MESSAGE', apiMessage);
+                    }
+			self.sendSocketNotification('M5', body);
+			this.sendCachedTime = "";
+			sendCachedTime = moment().format('YYYY-MM-DD >> HH:mm:ss.SSSZZ');
+			self.sendSocketNotification('LAST_UPDATED', sendCachedTime); //send notification back to MMM-Surf.js to set update time
+
+
+		} else {
+                    if (self.config.debug === 1) {
+                        apiMessage = moment().format('YYYY-MM-DDTHH:mm:ss.SSSZZ') + ' HELPER: M5 API ERROR(4):  ' + error;
+                        self.sendSocketNotification('HELPER_MESSAGE', apiMessage);
+                    }
+                }
+            } // end request(function())
+        ); //end Magicseaweed request
+        this.M5fetcherRunning = false;
+
+    },
+
+    tideParams: function() {
+		var params = "?extremes";
+		params += "&lat=" + this.config.latitude;
+		params += "&lon=" + this.config.longitude;
+		if(this.config.length !== "") {
+			params += "&length=" + this.config.length;
+		}
+		params += "&start=" + moment().startOf('date').unix();
+		params += "&key=" + this.config.worldTidesID;
+
+		return params;
+    },
+    
+ // START Tides FUNCTION
+ fetchTideData: function() {
+    var self = this;
+    var apiMessage = "";
+    this.TidefetcherRunning = true;
+    //Magicseaweed URL
+
+    var tideURL = encodeURI(this.config.worldTidesUrl  + this.tideParams());
+    if (this.config.debug === 1) {
+        apiMessage = moment().format('YYYY-MM-DDTHH:mm:ss.SSSZZ') + " HELPER: World Tides API REQUEST: " + this.config.worldTidesUrl;
+        self.sendSocketNotification('HELPER_MESSAGE', apiMessage);
+    }
+    request({
+            url: tideURL,
+            method: 'GET'
+        },
+        function(error, response, body) {
+            if (!error && response.statusCode == 200) {
+               
+        tides = body;
+                if (self.config.debug === 1) {
+                    apiMessage = moment().format('YYYY-MM-DDTHH:mm:ss.SSSZZ') + ' HELPER: World Tides API RESULT: Received';
+                    self.sendSocketNotification('HELPER_MESSAGE', apiMessage);
+                }
+        self.sendSocketNotification('TIDES', body);
+        this.sendCachedTime = "";
+        sendCachedTime = moment().format('YYYY-MM-DD >> HH:mm:ss.SSSZZ');
+        self.sendSocketNotification('LAST_UPDATED', sendCachedTime); //send notification back to MMM-Surf.js to set update time
+
+
+    } else {
+                if (self.config.debug === 1) {
+                    apiMessage = moment().format('YYYY-MM-DDTHH:mm:ss.SSSZZ') + ' HELPER: World Tides API ERROR(4):  ' + error;
+                    self.sendSocketNotification('HELPER_MESSAGE', apiMessage);
+                }
+            }
+        } // end request(function())
+    ); //end Magicseaweed request
+    this.M5fetcherRunning = false;
+
+},
+
     // ------------------ SOCKET CONFIGURATION --------------------------
     socketNotificationReceived: function(notification, payload) {
             var self = this;
@@ -241,8 +347,61 @@ module.exports = NodeHelper.create({
                     }
                 }
             } //end UPDATE_TIMER Socket Config
-	    
-	    
+
+	  ///// M5 Data fxwlash
+            if (notification === 'GET_M5' && this.started == false) {
+                        console.log(moment().format('YYYY-MM-DDTHH:mm:ss.SSSZZ') + ' HELPER_SOCKET(RECEIVED FROM MAIN): ' + notification + ': Fetching Data (2)')
+
+                        this.config = payload;
+                        if (this.config.debug === 1) {
+                            apiMessage = moment().format('YYYY-MM-DDTHH:mm:ss.SSSZZ') + ' HELPER_SOCKET(RECEIVED FROM MAIN): ' + notification + ': Fetching Data (2)';
+                            self.sendSocketNotification('HELPER_MESSAGE', apiMessage)
+                        }
+                        if (!this.M5fetcherRunning) {
+                            this.fetchM5Data();
+                        } else {
+                            var self = this;
+                            if (this.config.debug === 1) {
+                                apiMessage = moment().format('YYYY-MM-DDTHH:mm:ss.SSSZZ') + ' HELPER_SOCKET(ERROR)(2): ' + self.name + ': M5fetcherRunning = ' + this.M5fetcherRunning;
+                                self.sendSocketNotification('HELPER_MESSAGE', apiMessage)
+                            }
+                        } //end get live data if clause
+                    } else if (notification === 'GET_M5' && this.started == true) {
+                    //send cached Magicseaweed data back to module for new client to load
+                        if (this.config.debug === 1) {
+                            apiMessage = moment().format('YYYY-MM-DDTHH:mm:ss.SSSZZ') + ' HELPER_SOCKET(RECEIVED FROM MAIN): ' + notification + ': Sending cached data';
+                            self.sendSocketNotification('HELPER_MESSAGE', apiMessage)
+                            self.sendSocketNotification('M5', m5); //send previously fetched data
+                        }
+                } 
+
+                 ///// M5 Data fxwlash
+            if (notification === 'GET_Tide' && this.started == false) {
+                console.log(moment().format('YYYY-MM-DDTHH:mm:ss.SSSZZ') + ' HELPER_SOCKET(RECEIVED FROM MAIN): ' + notification + ': Fetching Data (2)')
+
+                this.config = payload;
+                if (this.config.debug === 1) {
+                    apiMessage = moment().format('YYYY-MM-DDTHH:mm:ss.SSSZZ') + ' HELPER_SOCKET(RECEIVED FROM MAIN): ' + notification + ': Fetching Data (2)';
+                    self.sendSocketNotification('HELPER_MESSAGE', apiMessage)
+                }
+                if (!this.TidefetcherRunning) {
+                    this.fetchTideData();
+                } else {
+                    var self = this;
+                    if (this.config.debug === 1) {
+                        apiMessage = moment().format('YYYY-MM-DDTHH:mm:ss.SSSZZ') + ' HELPER_SOCKET(ERROR)(2): ' + self.name + ': M5fetcherRunning = ' + this.M5fetcherRunning;
+                        self.sendSocketNotification('HELPER_MESSAGE', apiMessage)
+                    }
+                } //end get live data if clause
+            } else if (notification === 'GET_M5' && this.started == true) {
+            //send cached Magicseaweed data back to module for new client to load
+                if (this.config.debug === 1) {
+                    apiMessage = moment().format('YYYY-MM-DDTHH:mm:ss.SSSZZ') + ' HELPER_SOCKET(RECEIVED FROM MAIN): ' + notification + ': Sending cached data';
+                    self.sendSocketNotification('HELPER_MESSAGE', apiMessage)
+                    self.sendSocketNotification('M5', m5); //send previously fetched data
+                }
+        } 
+            
 	    
 	    if (notification === 'GET_NOAA' && this.started == false) {
 		    // if we haven't started, go fetch data. Otherwise dont & send cached data back
